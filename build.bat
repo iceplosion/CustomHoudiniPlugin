@@ -1,0 +1,1 @@
+cmake . -B build -DHOUDINI_CMAKE_CONFIG="D:\Programs\Side Effects Software\Houdini 19.0.589\toolkit\cmake" -G "Visual Studio 16 2019"
