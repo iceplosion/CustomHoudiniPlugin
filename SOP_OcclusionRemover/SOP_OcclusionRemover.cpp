@@ -363,7 +363,8 @@ public:
 	void QueryRayHit(float ox, float oy, float oz, float dx, float dy, float dz, float near, float far, RayHit* pHit)
 	{
 		RTCRayHit hit = RTCRayHit();
-		hit.ray.id = hit.ray.mask = hit.ray.time = hit.ray.flags = 0;
+		hit.ray.id = hit.ray.time = hit.ray.flags = 0;
+		hit.ray.mask = -1;
 		hit.ray.org_x = ox;
 		hit.ray.org_y = oy;
 		hit.ray.org_z = oz;
@@ -374,6 +375,8 @@ public:
 		hit.ray.tfar = far;
 		hit.ray.flags = 0;
 		hit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+		hit.hit.primID = RTC_INVALID_GEOMETRY_ID;
+		hit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
 		
 		RTCIntersectContext context;
 		rtcInitIntersectContext(&context);
@@ -805,7 +808,7 @@ public:
 	Ray* operator()(Ray* ray) const
 	{
 		RayHit hit;
-		_pAS->QueryRayHit(ray->ox, ray->oy, ray->oz, ray->dx, ray->dy, ray->dz, 0, std::numeric_limits<float>::infinity(), &hit);
+		_pAS->QueryRayHit(ray->ox, ray->oy, ray->oz, ray->dx, ray->dy, ray->dz, 0.1, std::numeric_limits<float>::infinity(), &hit);
 		ray->visible = hit.isVisible;
 		ray->hitPrim = hit.hitPrim;
 		ray->hitU = hit.hitU;
