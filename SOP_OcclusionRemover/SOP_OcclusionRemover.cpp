@@ -822,42 +822,50 @@ class VisibilityMarker
 {
 private:
 	UT_Array<bool>* _visibilityOfPrim;
-	// TODO: remove
+#ifdef _DEBUG
 	UT_Array<UT_Vector3>* _rayOrigin;
 	UT_Array<UT_Vector3>* _rayDir;
 	UT_Array<int>* _hitPrim;
 	UT_Array<UT_Vector2>* _hitUV;
 	UT_Array<bool>* _hitVisible;
 	UT_Array<UT_Vector3>* _hitPos;
+#endif
 public:
 	VisibilityMarker(
-		UT_Array<bool>& visibilityOfPrim, 
-		UT_Array<UT_Vector3>* pRayOrigin = nullptr, 
+		UT_Array<bool>& visibilityOfPrim 
+#ifdef _DEBUG
+		, UT_Array<UT_Vector3>* pRayOrigin = nullptr, 
 		UT_Array<UT_Vector3>* pRayDir = nullptr,
 		UT_Array<int>* pHitPrim = nullptr,
 		UT_Array<UT_Vector2>* pHitUV = nullptr,
 		UT_Array<bool>* pHitVisible = nullptr,
 		UT_Array<UT_Vector3>* pHitPos = nullptr
+#endif
 	) 
 		: 
-		_visibilityOfPrim(&visibilityOfPrim), 
-		_rayOrigin(pRayOrigin), 
+		_visibilityOfPrim(&visibilityOfPrim)
+#ifdef _DEBUG
+		, _rayOrigin(pRayOrigin), 
 		_rayDir(pRayDir),
 		_hitPrim(pHitPrim),
 		_hitUV(pHitUV),
 		_hitVisible(pHitVisible),
 		_hitPos(pHitPos)
+#endif
 	{}
 	VisibilityMarker(const VisibilityMarker& op) 
 		: 
-		_visibilityOfPrim(op._visibilityOfPrim), 
-		_rayOrigin(op._rayOrigin), 
+		_visibilityOfPrim(op._visibilityOfPrim)
+#ifdef _DEBUG
+		, _rayOrigin(op._rayOrigin), 
 		_rayDir(op._rayDir),
 		_hitPrim(op._hitPrim),
 		_hitUV(op._hitUV),
 		_hitVisible(op._hitVisible),
 		_hitPos(op._hitPos)
+#endif
 	{}
+
 	~VisibilityMarker(){}
 	void operator()(Ray* ray) const
 	{
@@ -870,7 +878,7 @@ public:
 		}
 		(*_visibilityOfPrim)[ray->primId] = (*_visibilityOfPrim)[ray->primId] || ray->visible;
 
-		// TODO: remove
+#ifdef _DEBUG
 		if (_rayOrigin != nullptr && _rayDir != nullptr)
 		{
 			(*_rayOrigin).append(UT_Vector3(ray->ox, ray->oy, ray->oz));
@@ -883,6 +891,7 @@ public:
 			(*_hitVisible).append(ray->visible);
 			(*_hitPos).append(ray->hitPos);
 		}
+#endif
 	}
 };
 
@@ -958,18 +967,20 @@ void SOP_OcclusionRemoverVerb::cook(const CookParms& cookparms) const
 	//}
 	if (!normalAttr.isValid())
 	{
+		// SOP user should add normal to occludee
 		cookparms.sopAddError(SOP_ATTRIBUTE_INVALID, "Normal");
 		return;
 	}
 	//occludee->normal(normalAttr);
 
-	// TODO: remove debug code
+#if _DEBUG
 	UT_Array<UT_Vector3> rayOrigin;
 	UT_Array<UT_Vector3> rayDir;
 	UT_Array<bool> hitVisible;
 	UT_Array<int> hitPrim;
 	UT_Array<UT_Vector2> hitUV;
 	UT_Array<UT_Vector3> hitPos;
+#endif
 
 	UT_Array<bool> visibility;
 	visibility.setCapacity(occludee->getNumPrimitives());
@@ -989,7 +1000,12 @@ void SOP_OcclusionRemoverVerb::cook(const CookParms& cookparms) const
 			)
 		&
 		tbb::make_filter<Ray*, void>(
-			tbb::filter::serial_out_of_order, VisibilityMarker(visibility, &rayOrigin, &rayDir, &hitPrim, &hitUV, &hitVisible, &hitPos)
+			tbb::filter::serial_out_of_order, 
+#if _DEBUG
+			VisibilityMarker(visibility, &rayOrigin, &rayDir, &hitPrim, &hitUV, &hitVisible, &hitPos)
+#else
+			VisibilityMarker(visibility)
+#endif
 			)
 	);
 
@@ -1009,7 +1025,8 @@ void SOP_OcclusionRemoverVerb::cook(const CookParms& cookparms) const
 		visibilityAttrib.set(offset, visibility[i]);
 	}
 
-	// TODO: remove debug
+#ifdef _DEBUG
+	// In debug build, we can use following attributes to review hit results
 	auto block = occludee->appendPointBlock(rayOrigin.size());
 	GA_RWHandleV3 rayOriginAttr(occludee->findFloatTuple(GA_ATTRIB_POINT, "ro"));
 	if (!rayOriginAttr.isValid())
@@ -1081,7 +1098,7 @@ void SOP_OcclusionRemoverVerb::cook(const CookParms& cookparms) const
 		hitVisibleAttr.set(offset, hitVisible[i]);
 		hitPosAttr.set(offset, hitPos[i]);
 	}
-
+#endif
 	//normalAttr.clear();
 	//occludee->destroyAttribute(GA_ATTRIB_PRIMITIVE, "Normal");
 }
